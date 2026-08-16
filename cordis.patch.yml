@@ -1,0 +1,4 @@
+# dsh-voice-live bundle: host /voice engine (Volcengine ASR/TTS) + client voice UI.
+- insert:
+    - id: voice-live
+      name: 'dsh-voice-live'

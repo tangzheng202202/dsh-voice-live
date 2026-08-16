@@ -1,0 +1,1 @@
+{"version":3,"file":"VoiceInputButton.d.ts","sourceRoot":"","sources":["../../../src/client/VoiceInputButton.tsx"],"names":[],"mappings":"AAWA,OAAO,KAAK,EAAE,WAAW,EAAE,YAAY,EAAE,MAAM,kCAAkC,CAAA;AASjF,MAAM,MAAM,qBAAqB,GAC/B,YAAY,CAAC,yBAAyB,CAAC,GAAG,WAAW,CAAC,OAAO,CAAC,CAAA;AAiBhE,wBAAgB,gBAAgB,CAAC,EAAE,YAAY,EAAE,UAAU,EAAE,CAAC,EAAE,EAAE,qBAAqB,+BA4HtF"}
