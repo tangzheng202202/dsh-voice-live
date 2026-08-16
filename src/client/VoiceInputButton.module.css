@@ -1,0 +1,99 @@
+.mic {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: var(--dsw-specific-selector);
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+
+.mic:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover-solid);
+}
+
+.mic:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.active {
+  background: var(--dsw-alias-button-danger-fill, #c0392b);
+  color: #fff;
+}
+
+.error {
+  background: var(--dsw-alias-button-danger-fill, #c0392b);
+  color: #fff;
+  outline: 2px solid #e74c3c;
+  outline-offset: 1px;
+}
+
+/* 科技感圆球：active 时渐变核心 + 双层扩散波纹。 */
+.orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+}
+
+.orbCore {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 32% 30%, #fff, #7fd0ff 38%, #2f81f7 70%, #1447a6);
+  box-shadow: 0 0 8px rgba(47, 129, 247, 0.9), 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+.orbRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(127, 208, 255, 0.85);
+  animation: orb-pulse 1.6s ease-out infinite;
+}
+
+.orbRing:nth-child(3) {
+  animation-delay: 0.8s;
+}
+
+@keyframes orb-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
+/* 麦克风按钮容器：字幕浮层定位锚点。 */
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* 实时字幕：识别中的 asr_partial 悬浮显示在按钮上方。 */
+.caption {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 320px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  z-index: 30;
+}
