@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "tsBuildInfoFile": "lib/tsconfig.host.tsbuildinfo"
+  },
+  "files": [
+    "src/index.ts",
+    "src/host/asr-utterance.ts",
+    "src/host/bounded-queue.ts",
+    "src/host/voice-server.ts",
+    "src/host/voice-trust.ts",
+    "src/host/volcengine.ts"
+  ]
+}
