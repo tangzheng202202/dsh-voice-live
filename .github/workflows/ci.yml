@@ -1,0 +1,37 @@
+name: Snapshot package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify export targets
+        run: npm run verify:artifacts
+      - name: Verify tarball entries
+        run: |
+          npm pack --json --dry-run --ignore-scripts > "$RUNNER_TEMP/voice-pack.json"
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs'
+          const report = JSON.parse(readFileSync(`${process.env.RUNNER_TEMP}/voice-pack.json`, 'utf8'))
+          const files = new Set(report[0].files.map((entry) => entry.path))
+          const required = [
+            'lib/index.js',
+            'lib/client.js',
+            'lib/invariant.js',
+            'lib/types/index.d.ts',
+            'lib/types/client/index.d.ts',
+            'lib/types/invariant.d.ts',
+          ]
+          for (const path of required) {
+            if (!files.has(path)) throw new Error(`missing packed artifact: ${path}`)
+          }
+          console.log(`verified ${required.length} package entry points in ${files.size} files`)
+          NODE

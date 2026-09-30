@@ -114,14 +114,22 @@ This repository is the plugin source extracted from the DSH monorepo
 coverage and is registered for DSH web via `cordis.patch.yml` in the
 monorepo bundle.
 
-**npm / dshmarket status — blocked upstream (honest note):** publishing
-`dsh-voice-live` as an installable npm package is currently blocked by an
-incomplete official package chain: `@deepseek-ai/dsh-client-runtime@0.0.1-rc.1`
-hard-depends on `@deepseek-ai/dsh-compact`, which is **not published to npm**
-(registry 404), so no plugin that depends on the DSH client runtime can be
-installed standalone today. Community plugins avoid this by shipping zero
-DSH dependencies. Options once the official chain is fixed: swap
-`workspace:*` deps for the published versions and `npm publish`.
+The committed `lib/` directory is a monorepo build snapshot. `npm pack` now
+includes its runtime bundles and type declarations, and
+`npm run verify:artifacts` checks their export targets. `npm run build`
+deliberately fails in this standalone checkout: `tsdown.config.ts` needs the
+monorepo's `clientBundle` helper. Rebuild in the monorepo before replacing the
+snapshot. The `./client` JavaScript entry registers with DSH's browser module
+loader; it is a side-effect script, not a native ESM named-export module.
+
+**npm / dshmarket status — monorepo bound:** this checkout is not ready for
+independent publication. The documented dependency chain from
+`@deepseek-ai/dsh-client-runtime@0.0.1-rc.1` includes
+`@deepseek-ai/dsh-compact`, which returned registry 404 at extraction time;
+its current registry status was not rechecked here. An offline tarball smoke
+test therefore does not establish installation in a stock DSH deployment.
+Rebuild the client bundle and verify the full dependency chain in the DSH
+monorepo before considering publication.
 
 Until then, build and run inside the DSH monorepo (the fork at
 `github.com/tangzheng202202/deepseek-harness`), or vendor the missing
