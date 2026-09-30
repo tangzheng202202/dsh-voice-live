@@ -15,17 +15,19 @@
   "exports": {
     ".": {
       "types": "./lib/types/index.d.ts",
+      "import": "./lib/index.js",
       "default": "./lib/index.js"
     },
     "./client": {
       "types": "./lib/types/client/index.d.ts",
+      "import": "./lib/client.js",
       "default": "./lib/client.js"
     },
     "./invariant": {
       "types": "./lib/types/invariant.d.ts",
+      "import": "./lib/invariant.js",
       "default": "./lib/invariant.js"
     },
-    "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "dsh": {
@@ -42,6 +44,8 @@
   },
   "scripts": {
     "build": "node build.mjs",
+    "verify:artifacts": "node build.mjs --verify-snapshot",
+    "prepack": "node build.mjs --verify-snapshot",
     "prepublishOnly": "node build.mjs"
   },
   "license": "MIT",
@@ -65,9 +69,7 @@
   },
   "devDependencies": {},
   "files": [
-    "lib/index.js",
-    "lib/client.js",
-    "lib/invariant.js",
+    "lib/",
     "cordis.patch.yml"
   ],
   "keywords": [

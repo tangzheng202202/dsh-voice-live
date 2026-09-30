@@ -52,3 +52,7 @@ API Key 由宿主的 `process.env.VOLCENGINE_API_KEY` 提供；浏览器不持�
 - **实时字幕**以输入框增量草稿呈现（asr_partial）；暂无悬浮字幕层。
 - 服务端断句依赖火山优化双向流式端点（`bigmodel_async` + `enable_nonstream`）；普通 `bigmodel` 流只回 partial、不会自行结束。
 - 本包 `*.host.spec.ts` 测试被排除在仓库 host aggregate 的 typecheck 之外（host aggregate 排除 `packages/client/*/src/**` 触发 TS6307）；它们在 vitest 下运行，宿主半部经包级 `tsc -b` 构建。
+
+## 独立仓库产物状态
+
+本仓库提交的 `lib/` 是 DSH monorepo 构建快照。`npm pack` 会包含运行时与类型声明，`npm run verify:artifacts` 只检查导出目标是否存在。`npm run build` 在独立仓库中会明确失败，因为 `tsdown.config.ts` 依赖 monorepo 的 `clientBundle` 辅助文件；更新快照须在 monorepo 中构建。`./client` JavaScript 入口是向 DSH 浏览器模块加载器注册的副作用脚本，不提供原生 ESM 命名导出。独立安装仍受上游依赖链限制；本仓库的打包检查不代表已可发布或安装到普通 DSH 环境。
