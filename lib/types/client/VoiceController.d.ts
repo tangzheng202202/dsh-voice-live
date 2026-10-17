@@ -58,6 +58,8 @@ export declare class VoiceController {
     private reconnectAttempts;
     private reconnectTimer;
     private reconnectInFlight;
+    /** 等到 ready 为止的握手计时。open 不清掉，否则漏掉 ready 时按钮会一直停在连接中。 */
+    private connectTimer;
     private static readonly STOP_TIMEOUT_MS;
     /** 应答模式空闲兜底：超过该时长无合成活动强制关闭。 */
     private static readonly REPLY_TIMEOUT_MS;
@@ -100,6 +102,7 @@ export declare class VoiceController {
     private armReplyTimer;
     private clearReplyTimer;
     private clearStopTimer;
+    private clearConnectTimer;
     private teardown;
     private clearReconnect;
     private fail;

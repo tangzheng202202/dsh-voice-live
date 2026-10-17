@@ -78,6 +78,24 @@
   display: inline-flex;
 }
 
+/* 缺 key / 连接失败：直接写在按钮旁边，不靠悬停提示。 */
+.alert {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 280px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #7a1f1f;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: normal;
+  z-index: 31;
+}
+
 /* 实时字幕：识别中的 asr_partial 悬浮显示在按钮上方。 */
 .caption {
   position: absolute;

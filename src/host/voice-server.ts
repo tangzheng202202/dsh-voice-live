@@ -347,18 +347,16 @@ export function createVoiceUpgrade(
         rejectWebSocketUpgrade(socket, 403)
         return
       }
-      if (admit !== undefined) {
-        let admission
-        try {
-          admission = admit(req)
-        } catch {
-          rejectWebSocketUpgrade(socket, 403)
-          return
-        }
-        if ('rejection' in admission || readVoiceOperator(admission.peer) === undefined) {
-          rejectWebSocketUpgrade(socket, 'rejection' in admission ? admission.rejection : 403)
-          return
-        }
+      let admission
+      try {
+        admission = admit?.(req) ?? { rejection: 401 as const }
+      } catch {
+        rejectWebSocketUpgrade(socket, 401)
+        return
+      }
+      if ('rejection' in admission || readVoiceOperator(admission.peer) === undefined) {
+        rejectWebSocketUpgrade(socket, 'rejection' in admission ? admission.rejection : 401)
+        return
       }
       wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req))
     },

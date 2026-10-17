@@ -3,8 +3,9 @@
  * 防御两条浏览器对本地 HTTP 服务的 confused-deputy 路径：
  *  - DNS rebinding：Host 头写着攻击者域名，但 socket 打到了本机服务；
  *  - 跨站请求：恶意页面发起的 WebSocket 握手。
- * 当前允许 loopback 主机 + 同源 Origin。宿主若提供 connection.admit，
- * 升级还会再过一遍 dsh 鉴权（0.2.0-rc.2 的 operator 只有 id、ctx、scope）。
+ * 当前允许 loopback 主机 + 同源 Origin。通过栅栏之后必须再过
+ * `ctx.connection.admit()`（0.2.0-rc.2 的 operator 只有 id、ctx、scope）。
+ * 拿不到 admit 时拒绝，不放行。
  */
 import type { IncomingMessage } from 'node:http';
 /** 归一化 hostname 是否为本机 loopback（localhost / ::1 / 127/8）。 */
@@ -28,7 +29,7 @@ export type VoiceAdmission = {
 } | {
     readonly rejection: 401 | 403;
 };
-/** 宿主鉴权回调。缺省表示当前 profile 没有 connection 服务。 */
+/** 宿主鉴权回调。升级处理函数在缺省时直接 401。 */
 export type VoiceAdmit = (req: IncomingMessage) => VoiceAdmission;
 /**
  * 只读 operator 的 id、ctx、scope。缺任一项就当没通过鉴权。

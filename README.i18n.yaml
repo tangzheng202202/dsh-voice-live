@@ -1,5 +1,5 @@
 # Blob hashes of the bilingual READMEs after the last edit that kept them in step.
 # Both languages carry equal authority. The monorepo pairing script is not in this repo;
 # re-record with `git hash-object README.md README.zh.md` after the next paired edit.
-README.md: 6ed58970dcb55454aa550b49ebc0c7a2e4e34f0d
-README.zh.md: 264d00c152c1e69593f2bb22fbe15c6e4603d73d
+README.md: 584312412dea55c2157d3bd520e73954c979521a
+README.zh.md: a5e379af2e2f900c098ea2d3c34b6856d337a944

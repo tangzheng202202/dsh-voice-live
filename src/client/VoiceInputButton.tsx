@@ -127,7 +127,10 @@ export function VoiceInputButton({ inputActions, useSession, t }: VoiceInputButt
 
   return (
     <div className={css.wrap}>
-      {active && caption !== '' && (
+      {error !== null && (
+        <span className={css.alert} role="alert">{error}</span>
+      )}
+      {error === null && active && caption !== '' && (
         <span className={css.caption} aria-hidden>{caption}</span>
       )}
       <Tooltip label={tooltip} side="top" delayMs={500}>

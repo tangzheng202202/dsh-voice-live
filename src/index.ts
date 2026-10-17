@@ -17,30 +17,41 @@ export const inject = ['webServer', 'agents']
 
 const DEFAULT_VOICE = 'zh_female_vv_uranus_bigtts'
 
+interface ConnectionLike {
+  admit?: (req: IncomingMessage) => { peer?: object; rejection?: unknown }
+}
+
 /**
- * dsh 0.2 的 `ctx.connection.admit()`。没有 connection 服务时返回 undefined，
- * /voice 仍只靠 loopback + 同源。有服务时只使用 operator 的 id、ctx、scope。
+ * 把 `ctx.connection.admit()` 收成 /voice 的准入结果。
+ * 0.2.0-rc.2 的 operator 只有 id、ctx、scope。拿不到 admit、调用抛错、
+ * 或结果不是放行，一律 401，不能把握手放过去。
  */
-function connectionAdmit(ctx: Context): VoiceAdmit | undefined {
-  const get = (ctx as { get?: (name: string) => unknown }).get
-  if (typeof get !== 'function') return undefined
-  const connection = get('connection') as { admit?: (req: IncomingMessage) => { peer?: object; rejection?: unknown } } | undefined
-  if (typeof connection?.admit !== 'function') return undefined
-  const admit = connection.admit.bind(connection)
-  return (req): VoiceAdmission => {
-    const result = admit(req)
-    if (result !== null && typeof result === 'object' && result.peer !== undefined && typeof result.peer === 'object') {
-      const operator = readVoiceOperator(result.peer)
-      return operator === undefined ? { rejection: 403 } : { peer: operator }
-    }
-    if (result !== null && typeof result === 'object' && (result.rejection === 401 || result.rejection === 403)) {
-      return { rejection: result.rejection }
-    }
-    return { rejection: 403 }
+function admissionFrom(connection: ConnectionLike | undefined, req: IncomingMessage): VoiceAdmission {
+  if (typeof connection?.admit !== 'function') return { rejection: 401 }
+  let result: { peer?: object; rejection?: unknown }
+  try {
+    result = connection.admit(req)
+  } catch {
+    return { rejection: 401 }
   }
+  if (result !== null && typeof result === 'object' && result.peer !== undefined && typeof result.peer === 'object') {
+    const operator = readVoiceOperator(result.peer)
+    return operator === undefined ? { rejection: 403 } : { peer: operator }
+  }
+  if (result !== null && typeof result === 'object' && (result.rejection === 401 || result.rejection === 403)) {
+    return { rejection: result.rejection }
+  }
+  return { rejection: 401 }
 }
 
 export function apply(ctx: Context): void {
+  // 没接上 connection 之前也拒绝。ctx.get('connection') 在 0.2.0-rc.2 上拿不到
+  // 服务；和 dsh-retro / dsh-sparkos 一样，等 ctx.inject 把 connection 注入后再读
+  // httpCtx.connection.admit。
+  let admitRequest: VoiceAdmit = () => ({ rejection: 401 })
+  ctx.inject(['connection'], (httpCtx) => {
+    admitRequest = (req) => admissionFrom((httpCtx as Context & { connection?: ConnectionLike }).connection, req)
+  })
   const upgrade = createVoiceUpgrade(
     process.env.VOLCENGINE_API_KEY ?? '',
     DEFAULT_VOICE,
@@ -49,7 +60,7 @@ export function apply(ctx: Context): void {
       if (dshSessionId === '') return
       ctx.agents.get(SessionId(dshSessionId))?.cancel({ kind: 'user' })
     },
-    connectionAdmit(ctx),
+    (req) => admitRequest(req),
   )
   ctx.effect(
     () => ctx.webServer.registerUpgrade({ path: '/voice', handler: upgrade.handle }),

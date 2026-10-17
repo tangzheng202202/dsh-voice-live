@@ -247,6 +247,8 @@ export class VoiceController {
   private reconnectAttempts = 0
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private reconnectInFlight = false
+  /** 等到 ready 为止的握手计时。open 不清掉，否则漏掉 ready 时按钮会一直停在连接中。 */
+  private connectTimer: ReturnType<typeof setTimeout> | null = null
 
   private static readonly STOP_TIMEOUT_MS = 3000
   /** 应答模式空闲兜底：超过该时长无合成活动强制关闭。 */
@@ -315,9 +317,10 @@ export class VoiceController {
       this.capture = capture
       this.setState('connecting')
       const ok = await this.connect(gen)
-      // stop/cancel 已发生（active=false）时静默退出，不报错
+      // 缺 key / stop / cancel 已经把代次作废并复位，这里不能再进入 listening。
+      if (gen !== this.generation || !this.active) return
       if (!ok) {
-        if (gen === this.generation) this.fail('无法连接语音服务（后端未启动）')
+        this.fail('无法连接语音服务（后端未启动）')
         return
       }
       this.setState('listening')
@@ -331,9 +334,9 @@ export class VoiceController {
     return new Promise((resolve) => {
       const ws = new WebSocket(WS_URL)
       ws.binaryType = 'arraybuffer'
-      const timer = setTimeout(() => { ws.close(); resolve(false) }, 3000)
+      this.clearConnectTimer()
+      this.connectTimer = setTimeout(() => { ws.close(); resolve(false) }, 3000)
       ws.onopen = () => {
-        clearTimeout(timer)
         if (gen !== this.generation) { ws.close(); return } // 已 stop/cancel
         ws.send(JSON.stringify({
           type: 'config',
@@ -344,7 +347,7 @@ export class VoiceController {
       }
       ws.onmessage = (event) => { this.onMessage(gen, event) }
       ws.onclose = () => {
-        clearTimeout(timer)
+        this.clearConnectTimer()
         // 连接未完成即关闭：必须 resolve，否则 start 挂起
         this.readyResolve?.(false)
         this.readyResolve = null
@@ -354,7 +357,7 @@ export class VoiceController {
           if (this.active && this.state !== 'closing') this.scheduleReconnect()
         }
       }
-      ws.onerror = () => { clearTimeout(timer); resolve(false) }
+      ws.onerror = () => { this.clearConnectTimer(); resolve(false) }
       // ready 到来即视为连接成功
       this.ws = ws
       this.readyResolve = resolve
@@ -417,11 +420,13 @@ export class VoiceController {
         return
       }
       if (msg.type === 'ready') {
+        this.clearConnectTimer()
         this.voiceSessionId = typeof msg.voiceSessionId === 'string' ? msg.voiceSessionId : ''
-        if (msg.hasKey === false) {
-          this.readyResolve?.(false)
+        if (msg.hasKey !== true) {
+          const resolve = this.readyResolve
           this.readyResolve = null
           this.fail('后端未配置 VOLCENGINE_API_KEY')
+          resolve?.(false)
           return
         }
         if (this.ws?.readyState === WebSocket.OPEN) {
@@ -572,8 +577,16 @@ export class VoiceController {
     }
   }
 
+  private clearConnectTimer(): void {
+    if (this.connectTimer !== null) {
+      clearTimeout(this.connectTimer)
+      this.connectTimer = null
+    }
+  }
+
   private teardown(): void {
     this.generation++ // 使所有在途消息失效
+    this.clearConnectTimer()
     this.clearStopTimer()
     this.clearReplyTimer()
     this.clearReconnect()

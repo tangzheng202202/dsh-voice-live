@@ -20,10 +20,12 @@ assistant replies aloud. The package ships two halves:
   `PlaybackQueue` (audio) — and rejects stale/late messages by generation.
 
 The API key is read from `process.env.VOLCENGINE_API_KEY` on the host; the
-browser never holds or transmits a key. `/voice` still requires a loopback
-Host and a same-origin `Origin`. When the host exposes `ctx.connection.admit`
-(dsh 0.2), the upgrade also has to pass that check. The operator this plugin
-reads has only `id`, `ctx`, and `scope`.
+browser never holds or transmits a key. `/voice` requires a loopback Host and
+a same-origin `Origin`, then `ctx.connection.admit()` (wired with
+`ctx.inject(['connection'])`, the same way other plugins do). A missing admit
+function or a logged-out browser is HTTP 401. The operator this plugin reads
+has only `id`, `ctx`, and `scope`. If `ready` says `hasKey` is not true, the
+mic button resets and shows `后端未配置 VOLCENGINE_API_KEY`.
 
 ## Install (about 5 minutes)
 

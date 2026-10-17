@@ -118,6 +118,7 @@ export function VoiceSettingsSection({ t }: VoiceSettingsSectionProps) {
           <button
             type="button"
             className={css.previewButton}
+            aria-label={t('voice.preview')}
             disabled={previewing}
             onClick={preview}
           >

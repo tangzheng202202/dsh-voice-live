@@ -144,7 +144,7 @@ export async function previewVoice(voice: string): Promise<PreviewResult> {
           return
         }
         if (msg.type === 'ready') {
-          if (msg.hasKey === false) {
+          if (msg.hasKey !== true) {
             finish({ ok: false, message: '后端未配置 VOLCENGINE_API_KEY' })
             return
           }

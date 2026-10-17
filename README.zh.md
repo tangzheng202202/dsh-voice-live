@@ -7,7 +7,7 @@ DSH 的实时语音交互：按下输入框麦克风即可说话，助手用语�
 - **宿主侧**：在 DSH 宿主进程内注册 `/voice` WebSocket 升级路由。一个连接承载一个会话：麦克风 PCM 送入火山流式 ASR（bigmodel_async + 服务端 VAD 断句），助手回复文本送入火山流式 TTS（seed-tts-2.0）。升级先过 loopback-Host + 同源栅栏；宿主有 `connection.admit` 时再过 dsh 鉴权。每个异步操作有唯一生命周期所有者，音频走有界队列，TTS 为单一串行 worker。
 - **客户端侧**：渲染输入框麦克风控件（`conversation.input.left`）与语音设置区（`settings.section`）。每个会话独享的 `VoiceController` 状态机拥有全部资源——`AudioCapture`（MediaStream/AudioContext/AudioWorklet）、`VoiceTransport`（WebSocket）、`PlaybackQueue`（播放）——并按代次拒绝迟到/旧消息。
 
-API Key 由宿主的 `process.env.VOLCENGINE_API_KEY` 提供；浏览器不持有、不传输任何 Key。`/voice` 仍要求 loopback Host 和同源 Origin。宿主如果提供 `ctx.connection.admit`（dsh 0.2），升级还得通过这一关。本插件只读 operator 的 `id`、`ctx`、`scope`。
+API Key 由宿主的 `process.env.VOLCENGINE_API_KEY` 提供；浏览器不持有、不传输任何 Key。`/voice` 要求 loopback Host 和同源 Origin，然后再走 `ctx.connection.admit()`（用 `ctx.inject(['connection'])` 拿到，和其他插件一样）。拿不到 admit，或浏览器未登录，握手是 HTTP 401。本插件只读 operator 的 `id`、`ctx`、`scope`。`ready` 里 `hasKey` 不是 true 时，麦克风按钮会马上复位，并显示 `后端未配置 VOLCENGINE_API_KEY`。
 
 ## 安装（大约 5 分钟）
 

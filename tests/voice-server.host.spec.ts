@@ -104,6 +104,11 @@ function lowEnergyFrame(): Buffer {
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
+/** 协议测试里当作已经登录。字段与 0.2.0-rc.2 operator 一致。 */
+function admitTestOperator() {
+  return { peer: { id: 'test-operator', ctx: { scope: 'test' }, scope: { scope: 'test' } } }
+}
+
 interface TestCtx {
   client: WebSocket
   sessionId: string
@@ -112,7 +117,7 @@ interface TestCtx {
 
 async function setup(): Promise<TestCtx> {
   h.reset()
-  const upgrade = createVoiceUpgrade('test-key', 'zh_female_vv_uranus_bigtts')
+  const upgrade = createVoiceUpgrade('test-key', 'zh_female_vv_uranus_bigtts', undefined, () => admitTestOperator())
   const server = createServer()
   server.on('upgrade', (req, socket, head) => { upgrade.handle(req, socket, head) })
   await new Promise<void>(r => server.listen(0, '127.0.0.1', r))
@@ -413,7 +418,7 @@ describe('barge-in：打断触发 agent 取消', () => {
   it('config 携带 dshSessionId；tts_cancel 时回调取消对应 agent（每连接恰好一次）', async () => {
     h.reset()
     const cancelled: string[] = []
-    const upgrade = createVoiceUpgrade('test-key', 'v', (id) => { cancelled.push(id) })
+    const upgrade = createVoiceUpgrade('test-key', 'v', (id) => { cancelled.push(id) }, () => admitTestOperator())
     const server = createServer()
     server.on('upgrade', (req, socket, head) => { upgrade.handle(req, socket, head) })
     await new Promise<void>(r => server.listen(0, '127.0.0.1', r))
@@ -441,7 +446,7 @@ describe('barge-in：打断触发 agent 取消', () => {
   it('未携带 dshSessionId 时取消回调不被调用', async () => {
     h.reset()
     const cancelled: string[] = []
-    const upgrade = createVoiceUpgrade('test-key', 'v', (id) => { cancelled.push(id) })
+    const upgrade = createVoiceUpgrade('test-key', 'v', (id) => { cancelled.push(id) }, () => admitTestOperator())
     const server = createServer()
     server.on('upgrade', (req, socket, head) => { upgrade.handle(req, socket, head) })
     await new Promise<void>(r => server.listen(0, '127.0.0.1', r))
@@ -464,7 +469,7 @@ describe('barge-in：打断触发 agent 取消', () => {
 
 describe('upgrade 信任（集成级）', () => {
   it('伪造 Host 的 WebSocket upgrade 被 403 拒绝', async () => {
-    const upgrade = createVoiceUpgrade('test-key', 'v')
+    const upgrade = createVoiceUpgrade('test-key', 'v', undefined, () => admitTestOperator())
     const server = createServer()
     server.on('upgrade', (req, socket, head) => { upgrade.handle(req, socket, head) })
     await new Promise<void>(r => server.listen(0, '127.0.0.1', r))
@@ -536,12 +541,16 @@ describe('upgrade 信任（集成级）', () => {
     await expectStatus(401, () => ({ rejection: 401 }))
   })
 
+  it('没有 admit 时同源握手也返回 401', async () => {
+    await expectStatus(401)
+  })
+
   it('admit 拒绝未授权请求（403）', async () => {
     await expectStatus(403, () => ({ rejection: 403 }))
   })
 
-  it('admit 抛错时升级被 403 拒绝', async () => {
-    await expectStatus(403, () => { throw new Error('auth down') })
+  it('admit 抛错时升级被 401 拒绝', async () => {
+    await expectStatus(401, () => { throw new Error('auth down') })
   })
 
   it('伪造 Host 时不调用 admit', async () => {
@@ -767,7 +776,7 @@ describe('协议边界：超长文本 / 音色参数 / 连接数 / 存活时长'
   })
 
   it('超过 MAX_CONNECTIONS 的连接被拒绝（1008）', async () => {
-    const upgrade = createVoiceUpgrade('test-key', 'v')
+    const upgrade = createVoiceUpgrade('test-key', 'v', undefined, () => admitTestOperator())
     const server = createServer()
     server.on('upgrade', (req, socket, head) => { upgrade.handle(req, socket, head) })
     await new Promise<void>(r => server.listen(0, '127.0.0.1', r))
@@ -792,7 +801,7 @@ describe('协议边界：超长文本 / 音色参数 / 连接数 / 存活时长'
 
   it('单连接最长存活：超过 MAX_SESSION_MS 被强制断开', async () => {
     vi.useFakeTimers() // 先于连接建立：让存活计时器挂在 fake timers 上
-    const upgrade = createVoiceUpgrade('test-key', 'v')
+    const upgrade = createVoiceUpgrade('test-key', 'v', undefined, () => admitTestOperator())
     const server = createServer()
     server.on('upgrade', (req, socket, head) => { upgrade.handle(req, socket, head) })
     await new Promise<void>(r => server.listen(0, '127.0.0.1', r))

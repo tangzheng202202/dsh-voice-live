@@ -115,6 +115,7 @@ describe('VoiceInputButton', () => {
 
     await act(async () => { controller.callbacks.onError('麦克风失败') })
     expect(button.getAttribute('aria-label')).toBe('麦克风失败')
+    expect(view.getByRole('alert').textContent).toBe('麦克风失败')
     view.unmount()
     expect(controller.cancel).toHaveBeenCalledOnce()
   })
