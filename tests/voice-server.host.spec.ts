@@ -498,6 +498,106 @@ describe('upgrade 信任（集成级）', () => {
     await new Promise<void>((resolve) => { server.close(() => { resolve() }) })
   })
 
+  async function expectStatus(status: 401 | 403, admit?: (req: unknown) => { rejection: 401 | 403 } | { peer: { id: string; ctx: object; scope: object } }): Promise<void> {
+    const upgrade = createVoiceUpgrade('test-key', 'v', undefined, admit as never)
+    const server = createServer()
+    server.on('upgrade', (req, socket, head) => { upgrade.handle(req, socket, head) })
+    await new Promise<void>(r => server.listen(0, '127.0.0.1', r))
+    const port = (server.address() as AddressInfo).port
+    const net = await import('node:net')
+    const raw = net.connect(port, '127.0.0.1')
+    const got: string[] = []
+    raw.on('data', (d: Buffer) => got.push(d.toString('utf8')))
+    raw.write([
+      'GET /voice HTTP/1.1',
+      `Host: 127.0.0.1:${port}`,
+      'Upgrade: websocket',
+      'Connection: Upgrade',
+      'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==',
+      'Sec-WebSocket-Version: 13',
+      `Origin: http://127.0.0.1:${port}`,
+      '',
+      '',
+    ].join('\r\n'))
+    await new Promise<void>((resolve, reject) => {
+      const t = setTimeout(() => { reject(new Error(`no ${status}: ${got.join('')}`)) }, 1500)
+      const poll = () => {
+        if (got.join('').includes(`HTTP/1.1 ${status}`)) { clearTimeout(t); resolve(); return }
+        setTimeout(() => { poll() }, 10)
+      }
+      poll()
+    })
+    raw.destroy()
+    upgrade.close()
+    await new Promise<void>((resolve) => { server.close(() => { resolve() }) })
+  }
+
+  it('admit 拒绝未登录请求（401）', async () => {
+    await expectStatus(401, () => ({ rejection: 401 }))
+  })
+
+  it('admit 拒绝未授权请求（403）', async () => {
+    await expectStatus(403, () => ({ rejection: 403 }))
+  })
+
+  it('admit 抛错时升级被 403 拒绝', async () => {
+    await expectStatus(403, () => { throw new Error('auth down') })
+  })
+
+  it('伪造 Host 时不调用 admit', async () => {
+    const admit = vi.fn(() => ({ peer: { id: 'op', ctx: {}, scope: {} } }))
+    const upgrade = createVoiceUpgrade('test-key', 'v', undefined, admit)
+    const server = createServer()
+    server.on('upgrade', (req, socket, head) => { upgrade.handle(req, socket, head) })
+    await new Promise<void>(r => server.listen(0, '127.0.0.1', r))
+    const port = (server.address() as AddressInfo).port
+    const net = await import('node:net')
+    const raw = net.connect(port, '127.0.0.1')
+    const got: string[] = []
+    raw.on('data', (d: Buffer) => got.push(d.toString('utf8')))
+    raw.write([
+      'GET /voice HTTP/1.1',
+      `Host: evil.example:${port}`,
+      'Upgrade: websocket',
+      'Connection: Upgrade',
+      'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==',
+      'Sec-WebSocket-Version: 13',
+      '',
+      '',
+    ].join('\r\n'))
+    await new Promise<void>((resolve, reject) => {
+      const t = setTimeout(() => { reject(new Error('no 403')) }, 1500)
+      const poll = () => {
+        if (got.join('').includes('403')) { clearTimeout(t); resolve(); return }
+        setTimeout(() => { poll() }, 10)
+      }
+      poll()
+    })
+    expect(admit).not.toHaveBeenCalled()
+    raw.destroy()
+    upgrade.close()
+    await new Promise<void>((resolve) => { server.close(() => { resolve() }) })
+  })
+
+  it('admit 放行后同源 upgrade 收到 ready', async () => {
+    const admit = vi.fn(() => ({ peer: { id: 'op-1', ctx: { name: 'ctx' }, scope: { name: 'scope' } } }))
+    const upgrade = createVoiceUpgrade('test-key', 'zh_female_vv_uranus_bigtts', undefined, admit)
+    const server = createServer()
+    server.on('upgrade', (req, socket, head) => { upgrade.handle(req, socket, head) })
+    await new Promise<void>(r => server.listen(0, '127.0.0.1', r))
+    const port = (server.address() as AddressInfo).port
+    const client = new WebSocket(`ws://127.0.0.1:${port}/voice`, { origin: `http://127.0.0.1:${port}` })
+    try {
+      const ready = await waitForMsg(client, m => m.type === 'ready')
+      expect(String(ready.voiceSessionId).length).toBeGreaterThan(0)
+      expect(admit).toHaveBeenCalled()
+    } finally {
+      client.close()
+      upgrade.close()
+      await new Promise<void>(r => server.close(() => { r() }))
+    }
+  })
+
   it('同源 upgrade 正常握手并收到 ready', async () => {
     const { client, sessionId, close } = await setup()
     try {

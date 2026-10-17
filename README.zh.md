@@ -4,16 +4,16 @@
 
 DSH 的实时语音交互：按下输入框麦克风即可说话，助手用语音朗读回答。本包分两半：
 
-- **宿主侧**：在 DSH 宿主进程内注册 `/voice` WebSocket 升级路由。一个连接承载一个会话：麦克风 PCM 送入火山流式 ASR（bigmodel_async + 服务端 VAD 断句），助手回复文本送入火山流式 TTS（seed-tts-2.0）。升级由 loopback-Host + 同源信任栅栏把关；每个异步操作有唯一生命周期所有者，音频走有界队列，TTS 为单一串行 worker。
+- **宿主侧**：在 DSH 宿主进程内注册 `/voice` WebSocket 升级路由。一个连接承载一个会话：麦克风 PCM 送入火山流式 ASR（bigmodel_async + 服务端 VAD 断句），助手回复文本送入火山流式 TTS（seed-tts-2.0）。升级先过 loopback-Host + 同源栅栏；宿主有 `connection.admit` 时再过 dsh 鉴权。每个异步操作有唯一生命周期所有者，音频走有界队列，TTS 为单一串行 worker。
 - **客户端侧**：渲染输入框麦克风控件（`conversation.input.left`）与语音设置区（`settings.section`）。每个会话独享的 `VoiceController` 状态机拥有全部资源——`AudioCapture`（MediaStream/AudioContext/AudioWorklet）、`VoiceTransport`（WebSocket）、`PlaybackQueue`（播放）——并按代次拒绝迟到/旧消息。
 
-API Key 由宿主的 `process.env.VOLCENGINE_API_KEY` 提供；浏览器不持有、不传输任何 Key。
+API Key 由宿主的 `process.env.VOLCENGINE_API_KEY` 提供；浏览器不持有、不传输任何 Key。`/voice` 仍要求 loopback Host 和同源 Origin。宿主如果提供 `ctx.connection.admit`（dsh 0.2），升级还得通过这一关。本插件只读 operator 的 `id`、`ctx`、`scope`。
 
 ## 安装（大约 5 分钟）
 
-包名是 `dsh-voice-live`。它对齐 npm 上真实存在的 `@deepseek-ai/*@0.0.1-rc.5`（Cordis 用 `^4.0.1`，本仓库开发安装锁定 `4.0.5`）。这一组可以一起解析，也不依赖没发布的 `@deepseek-ai/dsh-compact`。`0.2.1` 那条线没有发布 `@deepseek-ai/dsh-client-runtime`，所以这里不宣称能装上那一版。
+包名是 `dsh-voice-live`。官方 `@deepseek-ai/dsh-*` peer 接受已发布的 `0.0.1-rc.5`，或从 `0.2.0-rc.2` 起、不到 `0.3.0` 的 dsh `0.2.x`（`0.0.1-rc.5 || >=0.2.0-rc.2 <0.3.0-0`）。dsh 是拿这个范围和自己的版本号比，所以把 peer 锁死成 `0.0.1-rc.5` 会在 `0.2.0-rc.2` 上直接拒装。Cordis 仍是 `^4.0.1`。本仓库的开发安装和 `npm test` 继续用 `0.0.1-rc.5`，这一组能装上，也不会拉到没发布的 `@deepseek-ai/dsh-compact`。`@deepseek-ai/dsh-client-runtime` 没有 `0.2.0-rc.2` 这个版本；该版本的网页客户端仍使用同一套 `ctx.slots.inject` / `ctx.slots.register`。
 
-1. 使用已经带有这些 `0.0.1-rc.5` 包的 DeepSeek Harness。
+1. 使用 DeepSeek Harness `0.2.0-rc.2`（或 peer 范围内的其它 `0.2.x`），或者已经带有 `0.0.1-rc.5` 包的 Harness。
 2. 把 Key 放在宿主上。变量名见 [`examples/api-key.env.example`](examples/api-key.env.example)，写进 `~/.dsh/api-key.env`（值留在你自己的机器上）：
 
    ```sh

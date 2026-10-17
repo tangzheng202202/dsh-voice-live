@@ -10,8 +10,9 @@ assistant replies aloud. The package ships two halves:
   Volcengine streaming ASR (bigmodel_async with server-side VAD endpointing)
   and streams assistant reply text to Volcengine streaming TTS
   (seed-tts-2.0). The upgrade is gated by a loopback-Host + same-origin trust
-  fence; every async operation has one lifecycle owner, audio flows through a
-  bounded queue, and TTS is a single serial worker.
+  fence, and by `connection.admit` when that service is present. Every async
+  operation has one lifecycle owner, audio flows through a bounded queue, and
+  TTS is a single serial worker.
 - **Client half** renders the composer mic control (`conversation.input.left`)
   and the Voice settings section (`settings.section`). A per-session
   `VoiceController` state machine owns all resources — `AudioCapture`
@@ -19,18 +20,25 @@ assistant replies aloud. The package ships two halves:
   `PlaybackQueue` (audio) — and rejects stale/late messages by generation.
 
 The API key is read from `process.env.VOLCENGINE_API_KEY` on the host; the
-browser never holds or transmits a key.
+browser never holds or transmits a key. `/voice` still requires a loopback
+Host and a same-origin `Origin`. When the host exposes `ctx.connection.admit`
+(dsh 0.2), the upgrade also has to pass that check. The operator this plugin
+reads has only `id`, `ctx`, and `scope`.
 
 ## Install (about 5 minutes)
 
-This package is `dsh-voice-live`. It lines up with the published
-`@deepseek-ai/*@0.0.1-rc.5` set (and Cordis `^4.0.1`, installed here as
-`4.0.5`). That set resolves together on npm and does not depend on the
-unpublished `@deepseek-ai/dsh-compact` package. A newer Harness line such as
-`0.2.1` does not publish `@deepseek-ai/dsh-client-runtime`, so this plugin
-does not claim to install there.
+This package is `dsh-voice-live`. Official `@deepseek-ai/dsh-*` peers accept
+the published `0.0.1-rc.5` set **or** dsh `0.2.x` from `0.2.0-rc.2` up to but
+not including `0.3.0` (`0.0.1-rc.5 || >=0.2.0-rc.2 <0.3.0-0`). dsh compares
+those ranges with its own version, which is why an exact `0.0.1-rc.5` pin is
+rejected on `0.2.0-rc.2`. Cordis stays `^4.0.1`. Development installs and
+`npm test` still use the `0.0.1-rc.5` packages, because that set installs
+cleanly and does not pull the unpublished `@deepseek-ai/dsh-compact` package.
+`@deepseek-ai/dsh-client-runtime` has no `0.2.0-rc.2` release; the web client
+in that Harness still exposes the same `ctx.slots.inject` / `ctx.slots.register`
+contract.
 
-1. Use a DeepSeek Harness that already has those `0.0.1-rc.5` packages.
+1. Use DeepSeek Harness `0.2.0-rc.2` (or another `0.2.x` in the peer range), or a Harness that already has the `0.0.1-rc.5` packages.
 2. Put the key on the host. Copy the variable name from
    [`examples/api-key.env.example`](examples/api-key.env.example) into
    `~/.dsh/api-key.env` (the value stays on your machine):

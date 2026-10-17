@@ -3,9 +3,9 @@
  * API Key 由后端环境变量提供（阶段 A 起），不再在此填写。
  * Persists through localStorage helpers with no module-global lifecycle state.
  */
-import { useState } from 'react'
+import { useState, type ReactElement } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconPlayOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   getActiveProvider, getActiveVoice, getReplyFirst, getWakeWord, getWakeWordEnabled,
   previewVoice, type PreviewResult, PROVIDERS, setActiveProvider, setActiveVoice,
@@ -13,6 +13,12 @@ import {
 } from './usePipelineVoice.ts'
 import { isSpeechRecognitionAvailable, WebSpeechWakeWord } from './wake-word.ts'
 import css from './VoiceSettingsSection.module.css'
+
+type PlayIconProps = { size?: number; className?: string }
+/** 0.0.1 叫 IconPlayOutline16，0.2.0-rc.2 改成了 IconPlayOutlineRegular。 */
+const PlayIcon: ((props: PlayIconProps) => ReactElement) | undefined =
+  (primitives as { IconPlayOutline16?: (props: PlayIconProps) => ReactElement }).IconPlayOutline16
+  ?? (primitives as { IconPlayOutlineRegular?: (props: PlayIconProps) => ReactElement }).IconPlayOutlineRegular
 
 export type VoiceSettingsSectionProps =
   PropsRuntime<'settings.section'> & PropsLocale<'voice'>
@@ -115,7 +121,7 @@ export function VoiceSettingsSection({ t }: VoiceSettingsSectionProps) {
             disabled={previewing}
             onClick={preview}
           >
-            {previewing ? '…' : <IconPlayOutline16 size={14} />}
+            {previewing ? '…' : PlayIcon ? <PlayIcon size={14} /> : '▶'}
           </button>
         </div>
       </div>

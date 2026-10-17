@@ -3,7 +3,8 @@
  * 防御两条浏览器对本地 HTTP 服务的 confused-deputy 路径：
  *  - DNS rebinding：Host 头写着攻击者域名，但 socket 打到了本机服务；
  *  - 跨站请求：恶意页面发起的 WebSocket 握手。
- * 当前只允许 loopback 主机 + 同源 Origin；非本机暴露在信任检查落地前不允许。
+ * 当前允许 loopback 主机 + 同源 Origin。宿主若提供 connection.admit，
+ * 升级还会再过一遍 dsh 鉴权（0.2.0-rc.2 的 operator 只有 id、ctx、scope）。
  */
 
 import type { IncomingMessage } from 'node:http'
@@ -43,8 +44,39 @@ export function isTrustedVoiceRequest(req: IncomingMessage): boolean {
   }
 }
 
-/** 拒绝一次 WebSocket upgrade（HTTP 403 后立即断开）。 */
-export function rejectWebSocketUpgrade(socket: import('node:stream').Duplex): void {
-  socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n')
+/** 0.2.0-rc.2 `connection.admit()` 成功时 operator 上实际可读的字段。 */
+export interface VoiceOperator {
+  readonly id: string
+  readonly ctx: object
+  readonly scope: object
+}
+
+/** admit() 的两种结果：放行并给出 operator，或拒绝状态。 */
+export type VoiceAdmission =
+  | { readonly peer: VoiceOperator }
+  | { readonly rejection: 401 | 403 }
+
+/** 宿主鉴权回调。缺省表示当前 profile 没有 connection 服务。 */
+export type VoiceAdmit = (req: IncomingMessage) => VoiceAdmission
+
+/**
+ * 只读 operator 的 id、ctx、scope。缺任一项就当没通过鉴权。
+ * 不读其它字段：0.2.0-rc.2 的 admit() 没有 user、token 之类的属性。
+ */
+export function readVoiceOperator(peer: object): VoiceOperator | undefined {
+  const record = peer as { id?: unknown; ctx?: unknown; scope?: unknown }
+  const id = record.id
+  const ctx = record.ctx
+  const scope = record.scope
+  if (typeof id !== 'string' || id === '') return undefined
+  if (typeof ctx !== 'object' || ctx === null) return undefined
+  if (typeof scope !== 'object' || scope === null) return undefined
+  return { id, ctx, scope }
+}
+
+/** 拒绝一次 WebSocket upgrade（HTTP 401/403 后立即断开）。 */
+export function rejectWebSocketUpgrade(socket: import('node:stream').Duplex, status: 401 | 403 = 403): void {
+  const reason = status === 401 ? 'Unauthorized' : 'Forbidden'
+  socket.write(`HTTP/1.1 ${status} ${reason}\r\nConnection: close\r\n\r\n`)
   socket.destroy()
 }

@@ -14,6 +14,6 @@ describe('ui-voice-live invariant companion', () => {
     expect(name).toBe('client-ui-voice-live-invariant')
     expect(inject).toEqual(['invariants'])
     expect(await apply(ctx as never)).toBe(dispose)
-    expect(register).toHaveBeenCalledWith('@deepseek-ai/dsh-client-ui-voice-live', expect.any(Function))
+    expect(register).toHaveBeenCalledWith('dsh-voice-live', expect.any(Function))
   })
 })

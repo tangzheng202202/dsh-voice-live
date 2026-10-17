@@ -21,6 +21,7 @@
 import type { IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
 import WebSocket from 'ws';
+import { type VoiceAdmit } from './voice-trust.ts';
 /** 单个 WebSocket 连接的语音会话（导出供单元测试直接驱动防御分支）。 */
 export declare class VoiceSession {
     private readonly ws;
@@ -68,7 +69,7 @@ export declare class VoiceSession {
  * Bind a WebSocketServer to the webserver upgrade route and wire one session
  * per connection. Returns the upgrade handler plus its disposer.
  */
-export declare function createVoiceUpgrade(defaultApiKey: string, defaultVoice: string, cancelAgent?: (dshSessionId: string) => void): {
+export declare function createVoiceUpgrade(defaultApiKey: string, defaultVoice: string, cancelAgent?: (dshSessionId: string) => void, admit?: VoiceAdmit): {
     handle: (req: IncomingMessage, socket: Duplex, head: Buffer) => void;
     close: () => void;
 };

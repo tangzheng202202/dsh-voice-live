@@ -2,7 +2,7 @@
 /** Browser composition: both voice surfaces register only under live declarations and dispose cleanly. */
 
 import { Context } from '@deepseek-ai/cordis'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-runtime/client'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
@@ -64,5 +64,32 @@ describe('ui-voice-live browser apply', () => {
     await Promise.resolve()
     expect(slots.entries('conversation.input.left')[0]?.component).toBe(VoiceInputButton)
     expect(slots.entries('settings.section')[0]?.component).toBe(VoiceSettingsSection)
+  })
+
+  it('槽位注册抛错时不会把异常抛出插件', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const ctx = {
+      effect(fn: () => void) { fn() },
+      locale: { register: () => () => {}, bind: () => () => '语音交互' },
+      slots: {
+        inject(_key: string, callback: () => void) { callback() },
+        register() { throw new Error('slot boom') },
+      },
+    }
+    expect(() => { apply(ctx as never) }).not.toThrow()
+    expect(spy).toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
+  it('slots.inject 自己抛错时也不会拖垮调用方', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const ctx = {
+      effect(fn: () => void) { fn() },
+      locale: { register: () => () => {}, bind: () => () => '语音交互' },
+      slots: { inject() { throw new Error('inject boom') } },
+    }
+    expect(() => { apply(ctx as never) }).not.toThrow()
+    expect(spy).toHaveBeenCalled()
+    spy.mockRestore()
   })
 })

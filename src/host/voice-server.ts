@@ -23,7 +23,7 @@ import type { Duplex } from 'node:stream'
 import { randomUUID } from 'node:crypto'
 import WebSocket, { WebSocketServer } from 'ws'
 import { ttsStream } from './volcengine.ts'
-import { isTrustedVoiceRequest, rejectWebSocketUpgrade } from './voice-trust.ts'
+import { isTrustedVoiceRequest, readVoiceOperator, rejectWebSocketUpgrade, type VoiceAdmit } from './voice-trust.ts'
 import { AsrUtterance } from './asr-utterance.ts'
 
 const SENT_RE = /^([^。！？!?.\n]+[。！？!?.\n]+)([\s\S]*)$/
@@ -271,6 +271,7 @@ export function createVoiceUpgrade(
   defaultApiKey: string,
   defaultVoice: string,
   cancelAgent?: (dshSessionId: string) => void,
+  admit?: VoiceAdmit,
 ): { handle: (req: IncomingMessage, socket: Duplex, head: Buffer) => void; close: () => void } {
   const wss = new WebSocketServer({ noServer: true })
 
@@ -343,8 +344,21 @@ export function createVoiceUpgrade(
   return {
     handle: (req, socket, head) => {
       if (!isTrustedVoiceRequest(req)) {
-        rejectWebSocketUpgrade(socket)
+        rejectWebSocketUpgrade(socket, 403)
         return
+      }
+      if (admit !== undefined) {
+        let admission
+        try {
+          admission = admit(req)
+        } catch {
+          rejectWebSocketUpgrade(socket, 403)
+          return
+        }
+        if ('rejection' in admission || readVoiceOperator(admission.peer) === undefined) {
+          rejectWebSocketUpgrade(socket, 'rejection' in admission ? admission.rejection : 403)
+          return
+        }
       }
       wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req))
     },

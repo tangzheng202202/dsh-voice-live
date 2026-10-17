@@ -46,7 +46,7 @@ describe('ui-voice-live host apply', () => {
       const b = context()
       apply(b.ctx as never)
       expect(inject).toEqual(['webServer', 'agents'])
-      expect(h.create).toHaveBeenCalledWith('configured-key', 'zh_female_vv_uranus_bigtts', expect.any(Function))
+      expect(h.create).toHaveBeenCalledWith('configured-key', 'zh_female_vv_uranus_bigtts', expect.any(Function), undefined)
       expect(b.registerUpgrade).toHaveBeenCalledWith({ path: '/voice', handler: h.handle })
       b.effects.forEach((dispose) => { dispose() })
       expect(h.close).toHaveBeenCalledOnce()
@@ -67,7 +67,7 @@ describe('ui-voice-live host apply', () => {
     delete process.env.VOLCENGINE_API_KEY
     try {
       apply(context().ctx as never)
-      expect(h.create).toHaveBeenCalledWith('', 'zh_female_vv_uranus_bigtts', expect.any(Function))
+      expect(h.create).toHaveBeenCalledWith('', 'zh_female_vv_uranus_bigtts', expect.any(Function), undefined)
     } finally {
       if (previous !== undefined) process.env.VOLCENGINE_API_KEY = previous
     }
@@ -83,6 +83,41 @@ describe('ui-voice-live host apply', () => {
       cancelAgent('')
       expect(b.get).not.toHaveBeenCalled()
       expect(b.cancel).not.toHaveBeenCalled()
+    } finally {
+      if (previous === undefined) delete process.env.VOLCENGINE_API_KEY
+      else process.env.VOLCENGINE_API_KEY = previous
+    }
+  })
+
+  it('connection.admit 只读取 operator 的 id、ctx、scope', () => {
+    const previous = process.env.VOLCENGINE_API_KEY
+    process.env.VOLCENGINE_API_KEY = 'configured-key'
+    try {
+      const b = context()
+      const ctxObj = {}
+      const scopeObj = {}
+      const operator = new Proxy({ id: 'op-1', ctx: ctxObj, scope: scopeObj }, {
+        get(target, prop, receiver) {
+          if (prop !== 'id' && prop !== 'ctx' && prop !== 'scope') throw new Error(`read ${String(prop)}`)
+          return Reflect.get(target, prop, receiver)
+        },
+      })
+      const admit = vi.fn(() => ({ peer: operator }))
+      const ctx = { ...b.ctx, get: (name: string) => (name === 'connection' ? { admit } : undefined) }
+      apply(ctx as never)
+      const gate = h.create.mock.calls.at(-1)?.[3] as (req: unknown) => { peer?: { id: string; ctx: object; scope: object }; rejection?: number }
+      const req = { headers: { host: '127.0.0.1' } }
+      expect(gate(req)).toEqual({ peer: { id: 'op-1', ctx: ctxObj, scope: scopeObj } })
+      expect(admit).toHaveBeenCalledWith(req)
+
+      admit.mockReturnValueOnce({ rejection: 401 })
+      expect(gate(req)).toEqual({ rejection: 401 })
+
+      admit.mockReturnValueOnce({ peer: { id: 'op-1', ctx: ctxObj } })
+      expect(gate(req)).toEqual({ rejection: 403 })
+
+      admit.mockImplementationOnce(() => { throw new Error('auth down') })
+      expect(() => gate(req)).toThrow('auth down')
     } finally {
       if (previous === undefined) delete process.env.VOLCENGINE_API_KEY
       else process.env.VOLCENGINE_API_KEY = previous

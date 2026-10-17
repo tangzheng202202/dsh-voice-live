@@ -16,7 +16,8 @@ import { fileURLToPath } from 'node:url'
 import esbuild from 'esbuild'
 
 const root = path.dirname(fileURLToPath(import.meta.url))
-const CLIENT_ID = '@deepseek-ai/dsh-client-ui-voice-live'
+/** Package name. dsh 0.2 client-modules keys the factory on this id. */
+const CLIENT_ID = 'dsh-voice-live'
 
 function externalize(patterns) {
   return {
@@ -114,15 +115,24 @@ const client = await esbuild.build({
   plugins: [clientExternal, cssModules()],
 })
 const cjs = client.outputFiles[0].text
-const wrapped = `window.__ModuleLoader__.load({
+const wrapped = `try {
+window.__ModuleLoader__.load({
   id: ${JSON.stringify(CLIENT_ID)},
   factory: (require) => {
+    try {
     var module = { exports: {} };
     var exports = module.exports;
     ${cjs}
     return module.exports;
+    } catch (error) {
+      console.error("[dsh-voice-live] client module failed; the rest of the UI keeps running", error);
+      return { apply() {}, inject: [] };
+    }
   }
 });
+} catch (error) {
+  console.error("[dsh-voice-live] client registration failed; the rest of the UI keeps running", error);
+}
 `
 writeFileSync(path.join(root, 'lib/client.js'), wrapped)
 
