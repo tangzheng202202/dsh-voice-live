@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { IncomingMessage } from 'node:http'
-import { isLoopbackHostname, isTrustedVoiceRequest } from '../src/host/voice-trust.ts'
+import { isLoopbackHostname, isTrustedVoiceRequest, readVoiceOperator } from '../src/host/voice-trust.ts'
 
 function req(headers: Record<string, string | undefined>): IncomingMessage {
   return { headers } as unknown as IncomingMessage
@@ -45,5 +45,29 @@ describe('isTrustedVoiceRequest', () => {
     expect(isTrustedVoiceRequest(req({ host: '127.0.0.1:3080', 'sec-fetch-site': 'cross-site' }))).toBe(false)
     expect(isTrustedVoiceRequest(req({ host: '127.0.0.1:3080', origin: 'http://evil.example' }))).toBe(false)
     expect(isTrustedVoiceRequest(req({ host: '127.0.0.1:3080', origin: 'null' }))).toBe(false)
+  })
+})
+
+describe('readVoiceOperator', () => {
+  it('keeps id, ctx, and scope and ignores every other field', () => {
+    const ctx = { label: 'ctx' }
+    const scope = { label: 'scope' }
+    const peer = new Proxy({ id: 'op-1', ctx, scope, token: 'secret' }, {
+      get(target, prop, receiver) {
+        if (prop !== 'id' && prop !== 'ctx' && prop !== 'scope') throw new Error(`read ${String(prop)}`)
+        return Reflect.get(target, prop, receiver)
+      },
+    })
+    expect(readVoiceOperator(peer)).toEqual({ id: 'op-1', ctx, scope })
+  })
+
+  it('fails closed when id, ctx, or scope is missing', () => {
+    const ctx = {}
+    const scope = {}
+    expect(readVoiceOperator({ ctx, scope })).toBeUndefined()
+    expect(readVoiceOperator({ id: '', ctx, scope })).toBeUndefined()
+    expect(readVoiceOperator({ id: 'op-1', scope })).toBeUndefined()
+    expect(readVoiceOperator({ id: 'op-1', ctx })).toBeUndefined()
+    expect(readVoiceOperator({ id: 'op-1', ctx: null, scope })).toBeUndefined()
   })
 })

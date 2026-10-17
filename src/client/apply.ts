@@ -26,22 +26,38 @@ export const inject = ['slots', 'locale']
  * section, each once its slot declaration is on the ledger.
  * @param ctx - client root context.
  */
+/** 槽位注册失败时停在本插件里，避免把异常抛进整页插件加载。 */
+function guard(run: () => () => void): () => () => void {
+  return () => {
+    try {
+      return run()
+    } catch (error) {
+      console.error('[dsh-voice-live] voice UI registration failed; other plugins keep running', error)
+      return () => {}
+    }
+  }
+}
+
 export function apply(ctx: ClientContext): void {
-  ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-voice-live: dictionaries')
-  const t = ctx.locale.bind(NS)
+  try {
+    ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-voice-live: dictionaries')
+    const t = ctx.locale.bind(NS)
 
-  ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
-    name: 'conversation.input.left',
-    id: 'voice',
-    order: 0,
-    locale: NS,
-  }, VoiceInputButton))
+    ctx.slots.inject('conversation.input.left', guard(() => ctx.slots.register({
+      name: 'conversation.input.left',
+      id: 'voice',
+      order: 0,
+      locale: NS,
+    }, VoiceInputButton)))
 
-  ctx.slots.inject('settings.section', () => ctx.slots.register({
-    name: 'settings.section',
-    id: 'voice',
-    order: 100,
-    label: () => t('voice.nav'),
-    locale: NS,
-  }, VoiceSettingsSection))
+    ctx.slots.inject('settings.section', guard(() => ctx.slots.register({
+      name: 'settings.section',
+      id: 'voice',
+      order: 100,
+      label: () => t('voice.nav'),
+      locale: NS,
+    }, VoiceSettingsSection)))
+  } catch (error) {
+    console.error('[dsh-voice-live] voice UI failed to start; other plugins keep running', error)
+  }
 }

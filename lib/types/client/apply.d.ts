@@ -9,10 +9,5 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 /** Services required by this plugin. */
 export declare const inject: string[];
-/**
- * Register the voice dictionaries, the composer mic control, and the settings
- * section, each once its slot declaration is on the ledger.
- * @param ctx - client root context.
- */
 export declare function apply(ctx: ClientContext): void;
 //# sourceMappingURL=apply.d.ts.map

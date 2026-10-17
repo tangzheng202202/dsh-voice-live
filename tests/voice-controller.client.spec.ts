@@ -801,6 +801,8 @@ describe('采集与连接失败路径', () => {
     lastWS().__msg(JSON.stringify({ type: 'ready', voiceSessionId: 's', hasKey: false }))
     await p
     expect(cb.onError).toHaveBeenCalledWith('后端未配置 VOLCENGINE_API_KEY')
+    expect(c.currentState).toBe('idle')
+    expect(cb.onState.mock.calls.some(call => call[0] === 'listening')).toBe(false)
     expect(FakeWS.alive.length).toBe(0)
   })
 })

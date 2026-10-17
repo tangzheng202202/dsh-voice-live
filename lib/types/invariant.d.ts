@@ -1,6 +1,6 @@
 /**
- * Package-owned invariant companion for `@deepseek-ai/dsh-client-ui-voice-live`.
- * @module @deepseek-ai/dsh-client-ui-voice-live/invariant
+ * Package-owned invariant companion for `dsh-voice-live`.
+ * @module dsh-voice-live/invariant
  */
 import type { Context } from '@deepseek-ai/cordis';
 /** Cordis companion plugin name. */

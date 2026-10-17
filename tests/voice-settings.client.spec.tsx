@@ -20,6 +20,7 @@ beforeEach(() => {
 
 const t = (key: string): string => ({
   'voice.heading': '语音交互',
+  'voice.preview': '试听',
   'voice.provider': '服务商',
   'voice.voice': '音色',
   'voice.hint': '说明',
@@ -46,6 +47,7 @@ describe('VoiceSettingsSection', () => {
     expect(localStorage.getItem('dsh-voice-provider')).toBe('volcengine')
     expect(localStorage.getItem('dsh-voice')).toBe('zh_male_m191_uranus_bigtts')
     expect(screen.getByText('后端密钥说明')).toBeTruthy()
+    expect(view.container.querySelector('button')?.getAttribute('aria-label')).toBe('试听')
   })
 
   it('disables preview while pending and renders both success and failure', async () => {
