@@ -54,7 +54,7 @@ describe('ui-voice-live host apply', () => {
       const cancelAgent = h.create.mock.calls[0]?.[2] as (id: string) => void
       expect(cancelAgent).toBeTypeOf('function')
       cancelAgent('dsh-sess-9')
-      expect(b.get).toHaveBeenCalledWith(expect.objectContaining({}))
+      expect(b.get).toHaveBeenCalledWith('dsh-sess-9')
       expect(b.cancel).toHaveBeenCalledWith({ kind: 'user' })
     } finally {
       if (previous === undefined) delete process.env.VOLCENGINE_API_KEY

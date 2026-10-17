@@ -21,6 +21,48 @@ assistant replies aloud. The package ships two halves:
 The API key is read from `process.env.VOLCENGINE_API_KEY` on the host; the
 browser never holds or transmits a key.
 
+## Install (about 5 minutes)
+
+This package is `dsh-voice-live`. It lines up with the published
+`@deepseek-ai/*@0.0.1-rc.5` set (and Cordis `^4.0.1`, installed here as
+`4.0.5`). That set resolves together on npm and does not depend on the
+unpublished `@deepseek-ai/dsh-compact` package. A newer Harness line such as
+`0.2.1` does not publish `@deepseek-ai/dsh-client-runtime`, so this plugin
+does not claim to install there.
+
+1. Use a DeepSeek Harness that already has those `0.0.1-rc.5` packages.
+2. Put the key on the host. Copy the variable name from
+   [`examples/api-key.env.example`](examples/api-key.env.example) into
+   `~/.dsh/api-key.env` (the value stays on your machine):
+
+   ```sh
+   VOLCENGINE_API_KEY=your-key-here
+   ```
+
+3. Install and restart the web UI:
+
+   ```sh
+   dsh plugin --profile web add github:tangzheng202202/dsh-voice-live
+   ```
+
+   GitHub installs run the package build. `npm run build` in this repo uses
+   only `esbuild` and `tsc`; it does not need a DSH monorepo checkout.
+4. Open a chat, allow the microphone, and click the mic on the left of the
+   composer. Speak, then pause about 1.5 seconds. The line sends itself.
+   You should hear 「好的，我去查一下。」 before the real answer. If the host
+   has no key, the button reports `后端未配置 VOLCENGINE_API_KEY`.
+
+Screenshots and a GIF belong in `assets/` (not added yet):
+
+<!-- 截图 / GIF 位置
+assets/voice-live.gif        点麦克风 → 草稿出字 → 自动发送 → 听到开场白
+assets/settings-voices.png   设置页里的 30 个音色
+assets/barge-in.png          朗读过程中再次开口，播放被打断
+-->
+
+To hack on the repo itself: `npm install`, then `npm test`, then `npm run build`.
+License: [MIT](LICENSE).
+
 ## Interaction model
 
 - Tap the mic to start. While active the button renders a tech orb with pulse
@@ -102,27 +144,11 @@ None; this package neither assembles nor sends a provider request.
 - Server-side endpointing depends on Volcengine's optimized bidirectional
   endpoint (`bigmodel_async` + `enable_nonstream`); a plain `bigmodel` stream
   only returns partials and never finalizes on its own.
-- The package's `*.host.spec.ts` tests are excluded from the repository host
-  aggregate's typecheck (TS6307 tripped by the aggregate excluding
-  `packages/client/*/src/**`); they run under vitest and the host half builds
-  through the package `tsc -b`.
+- The `*.host.spec.ts` tests run in this repo with `npm test` (vitest). The
+  host half's type declarations are emitted by `tsc -b` inside `npm run build`.
 
-## Standalone package status
+## Where this came from
 
-This repository is the plugin source extracted from the DSH monorepo
-(`packages/client/ui-voice-live`). It ships 137 tests with 100% per-file
-coverage and is registered for DSH web via `cordis.patch.yml` in the
-monorepo bundle.
-
-**npm / dshmarket status — blocked upstream (honest note):** publishing
-`dsh-voice-live` as an installable npm package is currently blocked by an
-incomplete official package chain: `@deepseek-ai/dsh-client-runtime@0.0.1-rc.1`
-hard-depends on `@deepseek-ai/dsh-compact`, which is **not published to npm**
-(registry 404), so no plugin that depends on the DSH client runtime can be
-installed standalone today. Community plugins avoid this by shipping zero
-DSH dependencies. Options once the official chain is fixed: swap
-`workspace:*` deps for the published versions and `npm publish`.
-
-Until then, build and run inside the DSH monorepo (the fork at
-`github.com/tangzheng202202/deepseek-harness`), or vendor the missing
-packages yourself.
+The source was extracted from the DSH monorepo package
+`packages/client/ui-voice-live`. The copyright line in [LICENSE](LICENSE)
+still names DeepSeek. Build and test run in this repository.

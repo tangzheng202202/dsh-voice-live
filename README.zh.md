@@ -9,6 +9,36 @@ DSH 的实时语音交互：按下输入框麦克风即可说话，助手用语�
 
 API Key 由宿主的 `process.env.VOLCENGINE_API_KEY` 提供；浏览器不持有、不传输任何 Key。
 
+## 安装（大约 5 分钟）
+
+包名是 `dsh-voice-live`。它对齐 npm 上真实存在的 `@deepseek-ai/*@0.0.1-rc.5`（Cordis 用 `^4.0.1`，本仓库开发安装锁定 `4.0.5`）。这一组可以一起解析，也不依赖没发布的 `@deepseek-ai/dsh-compact`。`0.2.1` 那条线没有发布 `@deepseek-ai/dsh-client-runtime`，所以这里不宣称能装上那一版。
+
+1. 使用已经带有这些 `0.0.1-rc.5` 包的 DeepSeek Harness。
+2. 把 Key 放在宿主上。变量名见 [`examples/api-key.env.example`](examples/api-key.env.example)，写进 `~/.dsh/api-key.env`（值留在你自己的机器上）：
+
+   ```sh
+   VOLCENGINE_API_KEY=你的密钥
+   ```
+
+3. 安装并重启网页端：
+
+   ```sh
+   dsh plugin --profile web add github:tangzheng202202/dsh-voice-live
+   ```
+
+   从 GitHub 安装时会跑构建。本仓库的 `npm run build` 只用 `esbuild` 和 `tsc`，不需要再克隆一份 DSH monorepo。
+4. 打开对话，允许麦克风，点输入框左边的麦克风。说完停大约 1.5 秒，这句话会自己发出去。你应该先听到「好的，我去查一下。」，再听到正式回答。宿主没配 Key 时，按钮会提示 `后端未配置 VOLCENGINE_API_KEY`。
+
+截图和 GIF 预定放在 `assets/`（文件还没放进来）：
+
+<!-- 截图 / GIF 位置
+assets/voice-live.gif        点麦克风 → 草稿出字 → 自动发送 → 听到开场白
+assets/settings-voices.png   设置页里的 30 个音色
+assets/barge-in.png          朗读过程中再次开口，播放被打断
+-->
+
+改这个仓库：`npm install`，然后 `npm test`，然后 `npm run build`。许可证是 [MIT](LICENSE)。
+
 ## 交互模型
 
 - 点麦克风开始。激活时按钮显示科技感圆球与扩散波纹；识别文本增量进入输入框草稿。
@@ -51,4 +81,5 @@ API Key 由宿主的 `process.env.VOLCENGINE_API_KEY` 提供；浏览器不持�
 - **回声消除**依赖浏览器对 WebRTC 麦克风轨的 AEC（Chrome AEC3）。`VoiceController.getMicAec()` 可读取浏览器实际采纳值。`new Audio()` 播放不在 Chrome AEC 覆盖内（Chromium bug 687574），因此循环保持半双工：TTS 播放期间门控麦克风帧，打断先停播放再开始新识别。受控回声测试（扬声器 vs 耳机、AEC 开关）步骤见交付说明；运行时决策为半双工 + 打断。
 - **实时字幕**以输入框增量草稿呈现（asr_partial）；暂无悬浮字幕层。
 - 服务端断句依赖火山优化双向流式端点（`bigmodel_async` + `enable_nonstream`）；普通 `bigmodel` 流只回 partial、不会自行结束。
-- 本包 `*.host.spec.ts` 测试被排除在仓库 host aggregate 的 typecheck 之外（host aggregate 排除 `packages/client/*/src/**` 触发 TS6307）；它们在 vitest 下运行，宿主半部经包级 `tsc -b` 构建。
+- 本包 `*.host.spec.ts` 在本仓库用 `npm test`（vitest）运行，宿主半部经 `npm run build` 里的 `tsc -b` 出类型。
+- 源码从 DSH monorepo 的 `packages/client/ui-voice-live` 抽出。[LICENSE](LICENSE) 里的版权人仍是 DeepSeek。

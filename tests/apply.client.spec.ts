@@ -6,12 +6,12 @@ import { describe, expect, it } from 'vitest'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-runtime/client'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
-import { usePinnedBrowserLanguages } from '@deepseek-ai/dsh-client-test-runtime'
+import { pinBrowserLanguages } from './pin-browser-languages.ts'
 import { apply, inject } from '../src/client/apply.ts'
 import { VoiceInputButton } from '../src/client/VoiceInputButton.tsx'
 import { VoiceSettingsSection } from '../src/client/VoiceSettingsSection.tsx'
 
-usePinnedBrowserLanguages('zh-CN')
+pinBrowserLanguages('zh-CN')
 
 async function bench() {
   const ctx = new Context()
